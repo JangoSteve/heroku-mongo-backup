@@ -35,21 +35,28 @@ module HerokuMongoBackup
       backup = {}
   
       @db.collections.each do |col|
+        puts "Reading #{col.name}"
         backup['system.indexes.db.name'] = col.db.name if col.name == "system.indexes"
     
         records = []
     
         col.find().each do |record|
           records << record
+          print "."
         end
+        puts ""
 
+        puts "Found #{records.size} record(s)"
         backup[col.name] = records
       end
   
+      puts "Creating Marshal dump"
       marshal_dump = Marshal.dump(backup)
   
       file = File.new(@file_name, 'w')
       file.binmode
+
+      puts "Gzipping"
       file = Zlib::GzipWriter.new(file)
       file.write marshal_dump
       file.close
@@ -177,12 +184,15 @@ module HerokuMongoBackup
       self.chdir    
       self.store
 
+      puts "Uploading"
       if ENV['UPLOAD_TYPE'] == 'ftp'
         self.ftp_upload
         @ftp.close
       else
         self.s3_upload
       end
+
+      puts "Done"
     end
     
     def restore file_name
